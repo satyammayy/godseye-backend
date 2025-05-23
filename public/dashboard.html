@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - GodEye</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .user-profile {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .profile-image-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 30px auto;
+            width: 100%;
+            max-width: 200px;
+        }
+        .profile-image {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 15px;
+            border: 3px solid #667eea;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 24 24'%3E%3Cpath fill='%23667eea' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E") center/cover no-repeat;
+            background-color: #f8f9fa;
+        }
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .profile-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border: 3px solid #667eea;
+        }
+        .image-upload-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .image-upload-btn:hover {
+            background: #5a6fd1;
+        }
+        #imageUpload {
+            display: none;
+        }
+        .profile-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .info-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            color: #333;
+            font-weight: 500;
+        }
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .logout-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="user-profile">
+            <div class="profile-header">
+                <h1>Welcome to Dashboard</h1>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+            <div class="profile-image-section">
+                <img id="profileImage" src="https://via.placeholder.com/150" alt="Profile Picture" class="profile-image">
+                <input type="file" id="imageUpload" accept="image/*">
+                <button class="image-upload-btn" onclick="document.getElementById('imageUpload').click()">Update Profile Picture</button>
+            </div>
+            <div class="profile-info" id="userInfo">
+                <!-- User info will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+            }
+        }
+
+        // Display user information
+        function displayUserInfo() {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) return;
+
+            const user = JSON.parse(userStr);
+            
+            // Update profile image if exists
+            if (user.imageUrl) {
+                document.getElementById('profileImage').src = user.imageUrl;
+            }
+            const userInfo = document.getElementById('userInfo');
+
+            const fields = [
+                { label: 'Name', value: user.name },
+                { label: 'Email', value: user.email },
+                { label: 'Gender', value: user.gender },
+                { label: 'College', value: user.college }
+            ];
+
+            userInfo.innerHTML = fields.map(field => `
+                <div class="info-card">
+                    <div class="info-label">${field.label}</div>
+                    <div class="info-value">${field.value}</div>
+                </div>
+            `).join('');
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
+        }
+
+        // Initialize dashboard
+        // Handle image upload
+        document.getElementById('imageUpload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                if (!user || !user._id) {
+                    alert('User information not found. Please log in again.');
+                    window.location.href = '/index.html';
+                    return;
+                }
+
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    alert('Authentication token not found. Please log in again.');
+                    window.location.href = '/index.html';
+                    return;
+                }
+                
+                const response = await fetch(`/users/${user._id}/image`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+                
+                const data = await response.json();
+                
+                // Update user in localStorage
+                user.imageUrl = data.imageUrl;
+                localStorage.setItem('user', JSON.stringify(user));
+                
+                // Update profile image
+                document.getElementById('profileImage').src = data.imageUrl;
+                
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                alert('Failed to upload image. Please try again.');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            displayUserInfo();
+        });
+    </script>
+</body>
+</html>
